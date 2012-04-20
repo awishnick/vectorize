@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <algorithm>
 #include <xmmintrin.h>
 
 namespace vectorize {
@@ -184,7 +185,7 @@ namespace vectorize {
     }
 
     for (; n>0; --n, ++src, ++target) {
-      *target= f.apply(*target);
+      *target= f.apply(*src);
     }
   }
 

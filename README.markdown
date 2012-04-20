@@ -9,7 +9,7 @@ every value in an array or finding the maximum.
 
   It is not an attempt to compete with hand-rolled functions. It is meant
 to enable some of the "low-hanging fruit" to be vectorized very easily.
-However, often the choice is to quickly write a plain loop in C, or
+Often the choice is to quickly write a plain loop in C, or
 to spend some time writing intrinsics to vectorize it. *vectorize* presents
 a third option: write a loop that is as simple to write and read as the
 C version, but whose performance is much closer to the hand-rolled version.

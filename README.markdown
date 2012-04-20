@@ -18,6 +18,7 @@ C version, but whose performance is much closer to the hand-rolled version.
     apply(n, inputs, outputs, sqrt(_x));
     apply(n, inputs, outputs, max(_x, 1.0f) - 1.0f);
   Notice how the code is at least as easy to read as the C equivalent:
+
     for (unsigned i=0; i<n; ++i)
       outputs[i] = sqrt(inputs[i]);
     for (unsigned i=0; i<n; ++i)
@@ -26,9 +27,11 @@ C version, but whose performance is much closer to the hand-rolled version.
 ## Short introduction
   The core of *vectorize* is the `apply` function. It is similar to the STL
 algorithm `transform`. Its function signature is:
+
     template <class F>
     void apply(unsigned n, const float* src, float* target, F f);
-  The trick is that `f` is an expression whose type encodes the computation.
+
+The trick is that `f` is an expression whose type encodes the computation.
 I'll call it the "computation kernel." For example, `sqrt(_x)` doesn't
 compute anything, it just generates a type that knows how to compute the
 square root of vectors and scalars. The `apply` function knows how to process

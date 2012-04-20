@@ -17,7 +17,7 @@ C version, but whose performance is much closer to the hand-rolled version.
 ## Examples
     apply(n, inputs, outputs, sqrt(_x));
     apply(n, inputs, outputs, max(_x, 1.0f) - 1.0f);
-Notice how the code is at least as easy to read as the C equivalent:
+  Notice how the code is at least as easy to read as the C equivalent:
     for (unsigned i=0; i<n; ++i)
       outputs[i] = sqrt(inputs[i]);
     for (unsigned i=0; i<n; ++i)

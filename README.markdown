@@ -24,7 +24,7 @@ Notice how the code is at least as easy to read as the C equivalent:
       outputs[i] = max(inputs[i], 1.0f) - 1.0f;
 
 ## Short introduction
-  The core of `vectorize` is the `apply` function. It is similar to the STL
+  The core of *vectorize* is the `apply` function. It is similar to the STL
 algorithm `transform`. Its function signature is:
     template <class F>
     void apply(unsigned n, const float* src, float* target, F f);

@@ -1,21 +1,30 @@
 #pragma once
 
+#include <xmmintrin.h>
 #include <cmath>
 #include <algorithm>
-#include <xmmintrin.h>
 
 namespace vectorize {
 
+  template <unsigned N>
   struct Placeholder {
-    template <class T>
-    T apply(T x) const { return x; }
+    template <class T, unsigned M>
+    T apply(T (&x)[M]) const {
+      static_assert(N < M,
+                    "Too few arguments to placeholder expression,"
+                    "this is probably due to passing an expression"
+                    "with more placeholders than actual inputs.");
+      return x[N];
+    }
   };
 
   class Constant {
   public:
     Constant(float value) : _value(value) {}
-    __m128 apply(__m128) const { return _mm_set1_ps(_value); }
-    float apply(float) const { return _value; }
+    template <unsigned N>
+    __m128 apply(__m128(&)[N]) const { return _mm_set1_ps(_value); }
+    template <unsigned N>
+    float apply(float(&)[N]) const { return _value; }
   private:
     float _value;
   };
@@ -25,8 +34,8 @@ namespace vectorize {
   public:
     BinOp(const L& l, const R& r) : _l(l), _r(r) {}
 
-    template <class T>
-    T apply(T x) const {
+    template <class T, unsigned N>
+    T apply(T (&x)[N]) const {
       return Op::eval(_l.apply(x), _r.apply(x));
     }
   private:
@@ -85,39 +94,42 @@ namespace vectorize {
     Expr(const T& t) : _t(t) {}
     Expr() : _t() {}
 
-    __m128 apply(__m128 x) const {
+    template <unsigned N>
+    __m128 apply(__m128 (&x)[N]) const {
       return _t.apply(x);
     }
-    float apply(float x) const {
+    template <unsigned N>
+    float apply(float (&x)[N]) const {
       return _t.apply(x);
     }
   private:
     const T _t;
   };
 
-  const Expr<Placeholder> _x;
+  const Expr<Placeholder<0>> _x;
+  const Expr<Placeholder<1>> _y;
 
-  // Macro for generating binary operators. OpName is the C++ function
-  // the user calls, i.e. operator+ or max. BinOpFn is the expression
+  // Macro for generating binary operators. OpFunction is the C++ function
+  // the user calls, i.e. operator+ or max. BinOpClass is the expression
   // template class that implements the operator.
-#define GENERATE_BINARY_OPERATOR(OpName, BinOpFn)                     \
+#define GENERATE_BINARY_OPERATOR(OpFunction, BinOpClass)              \
   template <class L, class R>                                         \
-  Expr<BinOp<Expr<L>, Expr<R>, BinOpFn>>                              \
-  OpName(const Expr<L>& l, const Expr<R>& r) {                        \
-    typedef BinOp<Expr<L>, Expr<R>, BinOpFn> binop_type;              \
+  Expr<BinOp<Expr<L>, Expr<R>, BinOpClass>>                           \
+  OpFunction(const Expr<L>& l, const Expr<R>& r) {                    \
+    typedef BinOp<Expr<L>, Expr<R>, BinOpClass> binop_type;           \
     return Expr<binop_type>(binop_type(l, r));                        \
   }                                                                   \
   template <class L>                                                  \
-  Expr<BinOp<Expr<L>, Expr<Constant>, BinOpFn>>                       \
-  OpName(const Expr<L>& l, float r) {                                 \
-    typedef BinOp<Expr<L>, Expr<Constant>, BinOpFn> binop_type;       \
+  Expr<BinOp<Expr<L>, Expr<Constant>, BinOpClass>>                    \
+  OpFunction(const Expr<L>& l, float r) {                             \
+    typedef BinOp<Expr<L>, Expr<Constant>, BinOpClass> binop_type;    \
     Expr<Constant> c= Constant(r);                                    \
     return Expr<binop_type>(binop_type(l, c));                        \
   }                                                                   \
   template <class R>                                                  \
-  Expr<BinOp<Expr<Constant>, Expr<R>, BinOpFn>>                       \
-  OpName(float l, const Expr<R>& r) {                                 \
-    typedef BinOp<Expr<Constant>, Expr<R>, BinOpFn> binop_type;       \
+  Expr<BinOp<Expr<Constant>, Expr<R>, BinOpClass>>                    \
+  OpFunction(float l, const Expr<R>& r) {                             \
+    typedef BinOp<Expr<Constant>, Expr<R>, BinOpClass> binop_type;    \
     Expr<Constant> c= Constant(l);                                    \
     return Expr<binop_type>(binop_type(c, r));                        \
   }                                                                   \
@@ -135,10 +147,12 @@ namespace vectorize {
   public:
     UnaryOp(const T& t) : _t(t) {}
 
-    __m128 apply(__m128 x) const {
+    template <unsigned N>
+    __m128 apply(__m128 (&x)[N]) const {
       return Op::eval(_t.apply(x));
     }
-    float apply(float x) const {
+    template <unsigned N>
+    float apply(float (&x)[N]) const {
       return Op::eval(_t.apply(x));
     }
   private:
@@ -163,13 +177,13 @@ namespace vectorize {
     }
   };
 
-  // Macro for generating unary operators. OpName is the C++ function
-  // the user calls, i.e. abs or sqrt. UnOpFn is the expression
+  // Macro for generating unary operators. OpFunction is the C++ function
+  // the user calls, i.e. abs or sqrt. UnOpClass is the expression
   // template class that implements the operator.
-#define GENERATE_UNARY_OPERATOR(OpName, UnOpFn)                     \
+#define GENERATE_UNARY_OPERATOR(OpFunction, UnOpClass)              \
   template <class T>                                                \
-  Expr<UnaryOp<Expr<T>, UnOpFn>> OpName(const Expr<T>& t) {         \
-    typedef UnaryOp<Expr<T>, UnOpFn> unop_type;                     \
+  Expr<UnaryOp<Expr<T>, UnOpClass>> OpFunction(const Expr<T>& t) {  \
+    typedef UnaryOp<Expr<T>, UnOpClass> unop_type;                  \
     return Expr<unop_type>(unop_type(t));                           \
   }
 
@@ -181,11 +195,27 @@ namespace vectorize {
   template <class F>
   void apply(unsigned n, const float* src, float* target, F f) {
     for (; n>=4; n-=4, src+=4, target+=4) {
-      _mm_store_ps(target, f.apply(_mm_load_ps(src)));
+      __m128 x[]= { _mm_load_ps(src) };
+      _mm_store_ps(target, f.apply(x));
     }
 
     for (; n>0; --n, ++src, ++target) {
-      *target= f.apply(*src);
+      float x[]= { *src };
+      *target= f.apply(x);
+    }
+  }
+
+  template <class F>
+  void apply2(unsigned n, const float* src1, const float* src2,
+              float* target, F f) {
+    for (; n>=4; n-=4, src1+=4, src2+=4, target+=4) {
+      __m128 x[]= { _mm_load_ps(src1), _mm_load_ps(src2) };
+      _mm_store_ps(target, f.apply(x));
+    }
+
+    for (; n>0; --n, ++src1, ++src2, ++target) {
+      float x[]= { *src1, *src2 };
+      *target= f.apply(x);
     }
   }
 

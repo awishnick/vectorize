@@ -36,7 +36,7 @@ CXX = /usr/local/bin/clang++
 
 # All tests produced by this Makefile.  Remember to add new tests you
 # created to the list.
-TESTS = operators
+TESTS = operators apply2
 
 # All Google Test headers.  Usually you shouldn't change this
 # definition.
@@ -83,5 +83,12 @@ operators.o : $(USER_DIR)/operators.cpp \
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/operators.cpp
 
 operators : operators.o gtest_main.a
+	$(CXX) $(CPPFLAGS) -lpthread $^ -o $@
+
+apply2.o : $(USER_DIR)/apply2.cpp \
+	            $(VECTORIZE_HEADER)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/apply2.cpp
+
+apply2 : apply2.o gtest_main.a
 	$(CXX) $(CPPFLAGS) -lpthread $^ -o $@
 

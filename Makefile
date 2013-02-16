@@ -31,9 +31,6 @@ CPPFLAGS += -I$(GTEST_DIR)/include -I$(VECTORIZE_DIR)
 # Flags passed to the C++ compiler.
 CXXFLAGS += -g -std=c++0x -Wall -Wextra -Werror
 
-# Use clang as the compiler. Comment this out to use the default.
-CXX = /usr/local/bin/clang++
-
 # All tests produced by this Makefile.  Remember to add new tests you
 # created to the list.
 TESTS = operators apply2
